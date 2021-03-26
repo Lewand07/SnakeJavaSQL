@@ -9,7 +9,12 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.*;
 /**
  *
@@ -17,8 +22,8 @@ import javax.swing.*;
  */
 public class SnakeGame extends javax.swing.JPanel implements ActionListener {
         
-        private static int dif=2;
-        private static int res = 750;
+        private static int dif=1;
+        private static int res = 500;
 	static int UNIT_SIZE = getRes()/10;
 	static int GAME_UNITS = (getRes()*getRes())/(UNIT_SIZE*UNIT_SIZE);
 	static int DELAY = 200/getDif();
@@ -33,9 +38,23 @@ public class SnakeGame extends javax.swing.JPanel implements ActionListener {
 	boolean running = false;
 	Timer timer;
 	Random random;
+        Connection conn;
+        String log;
     
-    public SnakeGame() {
+        public SnakeGame() {
         random = new Random();
+        this.conn = Main.getConn();
+        this.setPreferredSize(new Dimension(getRes(), getRes()));
+        this.setBackground(Color.black);
+        this.setFocusable(true);
+        this.addKeyListener(new MyKeyAdapter());
+        startGame();
+    }
+        
+    public SnakeGame(String log) {
+        random = new Random();
+        this.log = log;
+        this.conn = Main.getConn();
         this.setPreferredSize(new Dimension(getRes(), getRes()));
         this.setBackground(Color.black);
         this.setFocusable(true);
@@ -78,6 +97,7 @@ public class SnakeGame extends javax.swing.JPanel implements ActionListener {
             g.drawString("Score "+getScore(), (getRes() - metrics.stringWidth("Score "+getScore()))/2,getRes()-10);
            }
             else{
+                setScore(score);
                 gameOver(g);
             }
         }
@@ -137,10 +157,23 @@ public class SnakeGame extends javax.swing.JPanel implements ActionListener {
         }
         public void gameOver(Graphics g){
             g.setColor(Color.red);
-            g.setFont(new Font("Ink Free", Font.BOLD, 75));
+            g.setFont(new Font("Ink Free", Font.BOLD, getRes()/10));
             FontMetrics metrics = getFontMetrics(g.getFont());
             g.drawString("Game Over", (getRes() - metrics.stringWidth("Game Over"))/2,getRes()/2);
             }
+        
+        public void setScore(int score){
+            try {
+                String sql = "INSERT OR IGNORE INTO scoreboard(login, score, date) VALUES(?,?,CURRENT_DATE)";
+                PreparedStatement st = conn.prepareStatement(sql);
+                st.setString(1,log);
+                st.setInt(2, score);
+                st.execute();
+            } catch (SQLException ex) {
+                Logger.getLogger(SnakeGame.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            
+        }
         
         @Override
         public void actionPerformed(ActionEvent e){
